@@ -1,0 +1,4 @@
+{
+  "name": "Multi-Site Session Manager",
+  "description": "A secure dashboard to manage isolated iframe sessions for multiple cPanel accounts with local credential storage."
+}
