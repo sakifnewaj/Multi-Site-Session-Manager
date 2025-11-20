@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, RefreshCw, Lock, Copy, Check, ExternalLink } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, RefreshCw, Lock, Check, ExternalLink, Home, User } from 'lucide-react';
 import { Site } from '../types';
 
 interface SessionFrameProps {
@@ -55,7 +55,7 @@ const SessionFrame: React.FC<SessionFrameProps> = ({ site, onClose }) => {
               className="p-1.5 text-gray-500 hover:text-primary hover:bg-blue-50 rounded transition-colors relative group"
               title="Copy Username"
             >
-              {copied === 'user' ? <Check size={14} className="text-success" /> : <UserIcon size={14} />}
+              {copied === 'user' ? <Check size={14} className="text-success" /> : <User size={14} />}
             </button>
             <button 
               onClick={() => site.password && copyToClipboard(site.password, 'pass')}
@@ -65,6 +65,22 @@ const SessionFrame: React.FC<SessionFrameProps> = ({ site, onClose }) => {
               {copied === 'pass' ? <Check size={14} className="text-success" /> : <Lock size={14} />}
             </button>
           </div>
+
+          {/* Manual Navigation to Dashboard */}
+          {site.homepageUrl && (
+            <button 
+              onClick={() => {
+                if (iframeRef.current) {
+                  setIsLoading(true);
+                  iframeRef.current.src = site.homepageUrl;
+                }
+              }}
+              className="p-1.5 text-gray-500 hover:text-primary hover:bg-blue-50 rounded transition-colors"
+              title="Force Go to Dashboard/Homepage"
+            >
+              <Home size={16} />
+            </button>
+          )}
 
           <button 
             onClick={handleReload}
@@ -103,14 +119,18 @@ const SessionFrame: React.FC<SessionFrameProps> = ({ site, onClose }) => {
           </div>
         )}
         
+        {/* 
+          CRITICAL UPDATE: Removed 'sandbox' attribute.
+          The sandbox attribute was likely blocking the redirect logic of the login pages.
+          By removing it, the iframe behaves like a standard window (still restricted by Same-Origin policy).
+        */}
         <iframe
           key={refreshKey}
           ref={iframeRef}
           src={site.url}
-          name={`session_${site.sessionId}`} // Critical for isolation attempts
+          name={`session_${site.sessionId}`}
           className="w-full h-full border-none"
           onLoad={handleIframeLoad}
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"
           allow="autoplay; encrypted-media; fullscreen; clipboard-write"
         />
       </div>
@@ -126,22 +146,5 @@ const SessionFrame: React.FC<SessionFrameProps> = ({ site, onClose }) => {
     </div>
   );
 };
-
-// Simple User Icon helper
-const UserIcon = ({ size }: { size: number }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-  >
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
 
 export default SessionFrame;
