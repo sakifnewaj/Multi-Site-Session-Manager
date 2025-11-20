@@ -1,67 +1,580 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Site Session Manager</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-            colors: {
-              primary: '#3498db',
-              secondary: '#2980b9',
-              success: '#27ae60',
-              danger: '#e74c3c',
-              warning: '#f39c12',
-              dark: '#2c3e50',
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#2563eb', 
+                        success: '#10b981',
+                        danger: '#ef4444',
+                        warning: '#f59e0b',
+                        dark: '#1e293b',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideIn: {
+                            '0%': { transform: 'translateX(-20px)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        }
+                    }
+                }
             }
-          }
         }
-      }
     </script>
+
     <style>
-      body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-      }
-      /* Custom scrollbar for nicer look */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #c1c1c1; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8; 
-      }
+        body { background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); min-height: 100vh; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .iframe-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: white;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.3s;
+        }
+        
+        .fade-out { opacity: 0; pointer-events: none; }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0"
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
   }
 }
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+<body class="text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- App Container -->
+    <div class="flex flex-col h-full max-w-[1920px] mx-auto w-full p-2 sm:p-4 gap-4">
+        
+        <!-- Header -->
+        <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col md:flex-row justify-between items-center gap-4 z-20 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-blue-500 to-blue-700 text-white p-2.5 rounded-lg shadow-md">
+                    <i class="fas fa-shield-alt text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800 leading-none">Session<span class="text-primary">Manager</span></h1>
+                    <p class="text-xs text-slate-500 mt-1 font-medium">Isolated Environment Dashboard</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center items-center gap-2">
+                <button onclick="app.toggleHelp(true)" class="px-3 py-2 text-slate-600 hover:text-primary hover:bg-blue-50 rounded-lg text-sm font-medium transition-all border border-transparent hover:border-blue-100">
+                    <i class="far fa-question-circle mr-1"></i> Fix Issues
+                </button>
+
+                <div class="h-6 w-px bg-slate-200 mx-2 hidden md:block"></div>
+
+                <button onclick="app.openAllSessions()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow-sm text-sm font-medium transition-all flex items-center gap-2 active:scale-95">
+                    <i class="fas fa-play-circle"></i> <span class="hidden sm:inline">Open All</span>
+                </button>
+                
+                <button onclick="app.closeAllSessions()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg shadow-sm text-sm font-medium transition-all flex items-center gap-2 active:scale-95">
+                    <i class="fas fa-stop-circle"></i> <span class="hidden sm:inline">Close All</span>
+                </button>
+                
+                <span class="ml-2 bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm" id="active-count-badge">
+                    0 Active
+                </span>
+                
+                <button onclick="app.toggleSidebar()" class="md:hidden p-2 ml-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex gap-4 overflow-hidden relative">
+            
+            <!-- Sidebar -->
+            <aside id="sidebar" class="hidden md:flex flex-col w-full md:w-80 lg:w-96 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all z-10 absolute md:relative h-full">
+                
+                <!-- Tabs -->
+                <div class="flex border-b border-slate-100">
+                    <button onclick="app.switchTab('add')" id="tab-btn-add" class="flex-1 py-3 text-sm font-semibold text-primary border-b-2 border-primary bg-blue-50/50 flex items-center justify-center gap-2 transition-all">
+                        <i class="fas fa-plus-circle"></i> Add New
+                    </button>
+                    <button onclick="app.switchTab('list')" id="tab-btn-list" class="flex-1 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2 transition-all">
+                        <i class="fas fa-list"></i> Accounts <span id="saved-count" class="bg-slate-200 text-slate-600 text-[10px] px-1.5 rounded-full ml-1">0</span>
+                    </button>
+                </div>
+
+                <!-- Sidebar Content -->
+                <div class="flex-1 overflow-y-auto p-4 bg-slate-50/30">
+                    
+                    <!-- ADD FORM -->
+                    <div id="tab-add" class="space-y-4 animate-fade-in">
+                        <form onsubmit="app.addSite(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Account Info</label>
+                                <div class="space-y-3">
+                                    <input type="text" id="siteName" placeholder="Account Name (e.g. Client A)" required class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                                    <input type="url" id="siteUrl" placeholder="Login URL (e.g. https://domain.com/cpanel)" required class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                                    <input type="url" id="homepageUrl" placeholder="Dashboard URL (Optional - where to go after login)" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-100 p-3 rounded-lg border-l-4 border-primary space-y-3">
+                                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-2">
+                                    <i class="fas fa-key"></i> Credentials
+                                </label>
+                                <input type="text" id="username" placeholder="Username" required class="w-full p-2.5 border border-slate-300 rounded-md text-sm focus:border-primary outline-none">
+                                <input type="password" id="password" placeholder="Password" required class="w-full p-2.5 border border-slate-300 rounded-md text-sm focus:border-primary outline-none">
+                            </div>
+
+                            <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white py-2.5 rounded-lg font-semibold shadow-sm hover:shadow transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-save"></i> Save Account
+                            </button>
+                        </form>
+
+                        <div class="mt-4 text-center">
+                             <button onclick="app.fillDemo()" class="text-xs text-blue-500 hover:underline">Fill Demo Data</button>
+                        </div>
+                    </div>
+
+                    <!-- SAVED LIST -->
+                    <div id="tab-list" class="hidden space-y-3 animate-fade-in">
+                        <div id="sites-container" class="space-y-3 pb-10">
+                            <!-- Sites will be injected here -->
+                        </div>
+                    </div>
+
+                </div>
+            </aside>
+
+            <!-- Session Grid -->
+            <main class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative">
+                <div id="sessions-grid" class="flex-1 overflow-y-auto p-4 bg-slate-100/50 grid grid-cols-1 xl:grid-cols-2 gap-6 content-start">
+                    <!-- Active Sessions injected here -->
+                </div>
+                
+                <!-- Empty State -->
+                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 p-6 text-center">
+                    <div class="w-20 h-20 bg-white rounded-full shadow-sm border border-slate-100 flex items-center justify-center mb-4">
+                        <i class="fas fa-layer-group text-3xl text-slate-300"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-700 mb-2">No Active Sessions</h2>
+                    <p class="max-w-xs text-sm text-slate-500 mb-6">Select an account from the sidebar to launch a secure iframe session.</p>
+                    <button onclick="app.switchTab('list'); app.openSidebarMobile()" class="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-blue-600 transition-all shadow-sm">
+                        View Accounts
+                    </button>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Help/Troubleshoot Modal -->
+    <div id="help-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4 animate-fade-in">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fas fa-wrench text-warning mr-2"></i> Troubleshooting Login</h3>
+                <button onclick="app.toggleHelp(false)" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4 text-sm text-slate-600">
+                <div class="bg-red-50 border border-red-100 p-4 rounded-lg">
+                    <strong class="block text-red-800 mb-1">Problem: "It loads the login page, but doesn't redirect after login."</strong>
+                    <p>This is caused by browser <strong>Third-Party Cookie Blocking</strong>. The cPanel session cookie cannot be set inside the iframe.</p>
+                </div>
+
+                <div>
+                    <strong class="block text-slate-800 mb-2">Solution 1: The "Magic Init"</strong>
+                    <p>On the session frame, click the <span class="inline-block px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-bold"><i class="fas fa-magic"></i> Init</span> button. This opens a popup to establish the session, then automatically reloads the iframe.</p>
+                </div>
+
+                <div>
+                    <strong class="block text-slate-800 mb-2">Solution 2: Pop-out Mode</strong>
+                    <p>Some servers (like WHM/cPanel) strictly forbid iframes (`X-Frame-Options: DENY`). Use the <span class="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-bold"><i class="fas fa-external-link-alt"></i></span> button to open it in a separate window.</p>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 text-right">
+                <button onclick="app.toggleHelp(false)" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC -->
+    <script>
+        const app = {
+            state: {
+                sites: [],
+                activeSessions: [],
+                isSidebarOpen: false
+            },
+
+            init() {
+                // Load from local storage
+                const saved = localStorage.getItem('multiSiteManager_v2');
+                if (saved) {
+                    try { this.state.sites = JSON.parse(saved); } catch(e) { console.error(e); }
+                }
+                this.updateUI();
+                
+                // Mobile responsiveness check
+                if (window.innerWidth < 768) {
+                    document.getElementById('sidebar').classList.add('hidden');
+                }
+            },
+
+            save() {
+                localStorage.setItem('multiSiteManager_v2', JSON.stringify(this.state.sites));
+                this.renderList();
+                this.updateBadge();
+            },
+
+            // --- Tabs & UI ---
+            switchTab(tab) {
+                document.getElementById('tab-btn-add').className = tab === 'add' 
+                    ? 'flex-1 py-3 text-sm font-semibold text-primary border-b-2 border-primary bg-blue-50/50 flex items-center justify-center gap-2 transition-all'
+                    : 'flex-1 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2 transition-all';
+                
+                document.getElementById('tab-btn-list').className = tab === 'list'
+                    ? 'flex-1 py-3 text-sm font-semibold text-primary border-b-2 border-primary bg-blue-50/50 flex items-center justify-center gap-2 transition-all'
+                    : 'flex-1 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2 transition-all';
+
+                document.getElementById('tab-add').className = tab === 'add' ? 'space-y-4 animate-fade-in' : 'hidden';
+                document.getElementById('tab-list').className = tab === 'list' ? 'space-y-3 animate-fade-in' : 'hidden';
+                
+                if (tab === 'list') this.renderList();
+            },
+
+            toggleSidebar() {
+                const el = document.getElementById('sidebar');
+                el.classList.toggle('hidden');
+                el.classList.toggle('flex');
+            },
+
+            openSidebarMobile() {
+                if (window.innerWidth < 768) {
+                    const el = document.getElementById('sidebar');
+                    el.classList.remove('hidden');
+                    el.classList.add('flex');
+                }
+            },
+
+            toggleHelp(show) {
+                document.getElementById('help-modal').style.display = show ? 'flex' : 'none';
+            },
+
+            // --- Site Management ---
+            addSite(e) {
+                e.preventDefault();
+                const newSite = {
+                    id: 'site_' + Date.now(),
+                    name: document.getElementById('siteName').value,
+                    url: document.getElementById('siteUrl').value,
+                    homepageUrl: document.getElementById('homepageUrl').value,
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                    sessionId: 'sess_' + Math.random().toString(36).substr(2, 9),
+                    lastOpened: null
+                };
+                
+                this.state.sites.push(newSite);
+                this.save();
+                
+                // Reset form
+                e.target.reset();
+                this.switchTab('list');
+            },
+
+            deleteSite(id) {
+                if(confirm('Delete this account?')) {
+                    this.state.sites = this.state.sites.filter(s => s.id !== id);
+                    this.closeSession(id);
+                    this.save();
+                }
+            },
+
+            fillDemo() {
+                document.getElementById('siteName').value = "Demo cPanel";
+                document.getElementById('siteUrl').value = "https://linkup.snllc.info";
+                document.getElementById('homepageUrl').value = "";
+                document.getElementById('username').value = "demo_user";
+                document.getElementById('password').value = "demo_pass";
+            },
+
+            // --- Session Management ---
+            openSession(id) {
+                if (!this.state.activeSessions.includes(id)) {
+                    this.state.activeSessions.push(id);
+                    
+                    // Update last opened
+                    const idx = this.state.sites.findIndex(s => s.id === id);
+                    if(idx !== -1) {
+                        this.state.sites[idx].lastOpened = new Date().toISOString();
+                        this.save();
+                    }
+                }
+                
+                // Close sidebar on mobile
+                if (window.innerWidth < 768) {
+                    document.getElementById('sidebar').classList.add('hidden');
+                    document.getElementById('sidebar').classList.remove('flex');
+                }
+
+                this.updateUI();
+            },
+
+            closeSession(id) {
+                this.state.activeSessions = this.state.activeSessions.filter(sid => sid !== id);
+                this.updateUI();
+            },
+
+            openAllSessions() {
+                this.state.sites.forEach(s => {
+                    if (!this.state.activeSessions.includes(s.id)) {
+                        this.state.activeSessions.push(s.id);
+                    }
+                });
+                this.updateUI();
+            },
+
+            closeAllSessions() {
+                this.state.activeSessions = [];
+                this.updateUI();
+            },
+
+            // --- Rendering ---
+            renderList() {
+                const container = document.getElementById('sites-container');
+                document.getElementById('saved-count').innerText = this.state.sites.length;
+                
+                if (this.state.sites.length === 0) {
+                    container.innerHTML = '<p class="text-center text-slate-400 text-sm py-4">No accounts saved.</p>';
+                    return;
+                }
+
+                container.innerHTML = this.state.sites.map(site => {
+                    const isActive = this.state.activeSessions.includes(site.id);
+                    return `
+                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="overflow-hidden">
+                                    <h3 class="font-bold text-slate-700 text-sm truncate">${site.name}</h3>
+                                    <div class="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                        <i class="fas fa-user opacity-50"></i> ${site.username}
+                                    </div>
+                                </div>
+                                <div class="w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}"></div>
+                            </div>
+                            <p class="text-[10px] text-slate-400 font-mono truncate mb-3">${site.url}</p>
+                            
+                            <div class="flex gap-2">
+                                <button onclick="app.openSession('${site.id}')" class="flex-1 py-1.5 rounded text-xs font-bold transition-colors flex items-center justify-center gap-1 ${isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-blue-50 text-primary hover:bg-blue-100'}">
+                                    <i class="fas ${isActive ? 'fa-sync' : 'fa-external-link-alt'}"></i> ${isActive ? 'Refresh' : 'Open'}
+                                </button>
+                                <button onclick="app.deleteSite('${site.id}')" class="px-2 bg-red-50 text-red-500 rounded hover:bg-red-100">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            updateUI() {
+                this.renderSessions();
+                this.renderList(); // Update status dots
+                
+                const count = this.state.activeSessions.length;
+                document.getElementById('active-count-badge').innerText = `${count} Active`;
+                
+                if (count === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                } else {
+                    document.getElementById('empty-state').classList.add('hidden');
+                }
+            },
+
+            renderSessions() {
+                const container = document.getElementById('sessions-grid');
+                // Only re-render if count changed to prevent iframe reload on simple updates
+                // But for vanilla JS simplicity, we'll just rebuild logic to preserve iframes if possible.
+                // Here we do a full rebuild for simplicity, but in production you'd diff.
+                
+                const currentIds = Array.from(container.children).map(el => el.id.replace('session-', ''));
+                
+                // Remove closed
+                currentIds.forEach(id => {
+                    if (!this.state.activeSessions.includes(id)) {
+                        const el = document.getElementById('session-' + id);
+                        if(el) el.remove();
+                    }
+                });
+
+                // Add new
+                this.state.activeSessions.forEach(id => {
+                    if (!currentIds.includes(id)) {
+                        const site = this.state.sites.find(s => s.id === id);
+                        if (!site) return;
+                        
+                        const div = document.createElement('div');
+                        div.id = `session-${site.id}`;
+                        div.className = 'bg-white rounded-lg border border-slate-200 shadow-lg overflow-hidden flex flex-col h-[600px] animate-slide-in';
+                        div.innerHTML = `
+                            <!-- Session Header -->
+                            <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 flex justify-between items-center">
+                                <div class="flex items-center gap-2 overflow-hidden">
+                                    <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-sm text-slate-700 truncate max-w-[100px] sm:max-w-[150px]">${site.name}</span>
+                                            <button onclick="app.copy('${site.username}')" class="text-[10px] bg-slate-200 hover:bg-slate-300 px-1.5 rounded text-slate-600 transition-colors" title="Copy User">
+                                                <i class="fas fa-user"></i>
+                                            </button>
+                                            <button onclick="app.copy('${site.password}')" class="text-[10px] bg-slate-200 hover:bg-slate-300 px-1.5 rounded text-slate-600 transition-colors" title="Copy Pass">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-1">
+                                    <!-- Init Helper -->
+                                    <button onclick="app.initSession('${site.id}', '${site.url}')" class="px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded text-xs font-medium transition-colors border border-indigo-200" title="Initialize Session via Popup (Fix Login Loop)">
+                                        <i class="fas fa-magic"></i> Init
+                                    </button>
+
+                                    <div class="w-px h-4 bg-slate-300 mx-1"></div>
+
+                                    <!-- Dashboard Nav -->
+                                    <button onclick="app.navToHome('${site.id}', '${site.homepageUrl || site.url}')" class="p-1.5 text-slate-400 hover:text-primary hover:bg-blue-50 rounded" title="Go to Dashboard">
+                                        <i class="fas fa-home"></i>
+                                    </button>
+                                    
+                                    <!-- Reload -->
+                                    <button onclick="app.reloadFrame('${site.id}')" class="p-1.5 text-slate-400 hover:text-primary hover:bg-blue-50 rounded" title="Reload Frame">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+
+                                    <!-- Pop-out (Important for cPanel) -->
+                                    <a href="${site.url}" target="_blank" class="p-1.5 text-slate-400 hover:text-primary hover:bg-blue-50 rounded" title="Open in New Tab (Pop-out)">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+
+                                    <button onclick="app.closeSession('${site.id}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded ml-1">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Iframe -->
+                            <div class="flex-1 relative bg-slate-100 iframe-wrapper">
+                                <div id="loader-${site.id}" class="loading-overlay">
+                                    <i class="fas fa-circle-notch fa-spin text-3xl text-primary mb-2"></i>
+                                    <span class="text-xs font-medium text-slate-500">Connecting...</span>
+                                </div>
+                                <iframe 
+                                    id="frame-${site.id}"
+                                    src="${site.url}" 
+                                    class="w-full h-full border-none"
+                                    onload="app.frameLoaded('${site.id}')"
+                                    referrerpolicy="origin"
+                                ></iframe>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    }
+                });
+            },
+
+            frameLoaded(id) {
+                const loader = document.getElementById(`loader-${id}`);
+                if (loader) loader.classList.add('fade-out');
+            },
+
+            reloadFrame(id) {
+                const frame = document.getElementById(`frame-${id}`);
+                const loader = document.getElementById(`loader-${id}`);
+                if (frame && loader) {
+                    loader.classList.remove('fade-out');
+                    frame.contentWindow.location.reload();
+                }
+            },
+
+            navToHome(id, url) {
+                const frame = document.getElementById(`frame-${id}`);
+                const loader = document.getElementById(`loader-${id}`);
+                if (frame && loader) {
+                    loader.classList.remove('fade-out');
+                    frame.src = url;
+                }
+            },
+
+            copy(text) {
+                navigator.clipboard.writeText(text);
+                // Could add toast here
+            },
+
+            initSession(id, url) {
+                // Opens a popup to set the cookie, then reloads the iframe
+                const w = window.open(url, 'init_window', 'width=800,height=600');
+                if (w) {
+                    setTimeout(() => {
+                        // We can't programmatically close the window if it's cross-origin due to security,
+                        // but we can reload the iframe after a delay assuming user logged in.
+                        if(confirm("Did you log in successfully in the popup window?\n\nIf yes, click OK to refresh the dashboard frame.")) {
+                            this.reloadFrame(id);
+                            // w.close(); // Often blocked, but worth a try
+                        }
+                    }, 5000); // Wait 5 seconds before asking
+                } else {
+                    alert("Popup blocked. Please allow popups for this tool to work.");
+                }
+            }
+        };
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
 </html>

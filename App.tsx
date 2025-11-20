@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Menu, PlayCircle, StopCircle } from 'lucide-react';
+import { Shield, Menu, PlayCircle, StopCircle, HelpCircle } from 'lucide-react';
 import { Site, TabView } from './types';
 import Sidebar from './components/Sidebar';
 import SessionManager from './components/SessionManager';
+import HelpModal from './components/HelpModal';
 
 const App: React.FC = () => {
   const [sites, setSites] = useState<Site[]>([]);
   const [activeSessions, setActiveSessions] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<TabView>('add-site');
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Load sites from local storage on mount
   useEffect(() => {
@@ -68,17 +70,30 @@ const App: React.FC = () => {
       {/* Header */}
       <header className="bg-white rounded-xl shadow-md p-4 mb-4 flex flex-col md:flex-row justify-between items-center gap-4 z-20">
         <div className="flex items-center gap-3">
-          <Shield className="w-8 h-8 text-primary" />
-          <h1 className="text-2xl font-bold text-primary">Multi-Site Session Manager</h1>
+          <div className="bg-gradient-to-br from-primary to-secondary p-2 rounded-lg text-white shadow-md">
+            <Shield className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Session<span className="text-primary">Manager</span></h1>
         </div>
         
         <div className="flex flex-wrap justify-center items-center gap-3">
+          <button 
+            onClick={() => setHelpOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-primary hover:bg-blue-50 rounded-lg transition-all text-sm font-medium border border-transparent hover:border-blue-100"
+            title="Setup & Deployment Guide"
+          >
+            <HelpCircle size={18} />
+            <span className="hidden sm:inline">Setup Guide</span>
+          </button>
+
+          <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block"></div>
+
           <button 
             onClick={handleOpenAll}
             className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-green-600 text-white rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95 text-sm font-medium"
           >
             <PlayCircle size={18} />
-            <span>Open All Sessions</span>
+            <span className="hidden sm:inline">Open All</span>
           </button>
           
           <button 
@@ -86,15 +101,15 @@ const App: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-danger hover:bg-red-600 text-white rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95 text-sm font-medium"
           >
             <StopCircle size={18} />
-            <span>Close All Sessions</span>
+            <span className="hidden sm:inline">Close All</span>
           </button>
           
-          <span className="bg-success text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+          <span className="bg-dark text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm border border-gray-700">
             {activeSessions.length} Active
           </span>
           
           <button 
-            className="md:hidden p-2 bg-primary text-white rounded-lg"
+            className="md:hidden p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             <Menu size={20} />
@@ -107,7 +122,7 @@ const App: React.FC = () => {
         {/* Sidebar */}
         <div className={`
           ${sidebarOpen ? 'flex' : 'hidden'} 
-          md:flex flex-col w-full md:w-[350px] bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300
+          md:flex flex-col w-full md:w-[350px] bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 border border-gray-100
         `}>
           <Sidebar 
             sites={sites}
@@ -121,7 +136,7 @@ const App: React.FC = () => {
         </div>
         
         {/* Session Area */}
-        <div className="flex-1 bg-white rounded-xl shadow-lg overflow-hidden flex flex-col relative">
+        <div className="flex-1 bg-white rounded-xl shadow-lg overflow-hidden flex flex-col relative border border-gray-100">
           <SessionManager 
             sites={sites}
             activeSessions={activeSessions}
@@ -133,6 +148,9 @@ const App: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Help Modal */}
+      <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 };
